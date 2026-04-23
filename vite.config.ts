@@ -14,6 +14,6 @@ export default defineConfig({
     },
   },
   server:{
-    allowedHosts: ['*'],
+    allowedHosts: ['devserver-main--expoinit.netlify.app'],
   }
 })
