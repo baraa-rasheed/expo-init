@@ -273,7 +273,7 @@ npm run dev
 
 This runs:
 - Frontend (Vite) on `http://localhost:5173`
-- Backend (Express) on `http://localhost:3001`
+- Backend (Express) on `https://devserver-main--expoinit.netlify.app`
 
 ### Start Individually
 ```bash

@@ -153,7 +153,7 @@ export function useExpoModules() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/expo-modules')
+    fetch('https://devserver-main--expoinit.netlify.app/api/expo-modules')
       .then(res => res.json())
       .then(data => {
         setModules(data);
@@ -253,7 +253,7 @@ const handleGenerate = async () => {
   if (splashFile) formData.append('splash', splashFile);
 
   try {
-    const response = await fetch('http://localhost:3001/api/generate', {
+    const response = await fetch('https://devserver-main--expoinit.netlify.app/api/generate', {
       method: 'POST',
       body: formData,
     });

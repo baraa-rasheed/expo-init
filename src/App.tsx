@@ -64,7 +64,7 @@ function App() {
       }
 
       // Call the generate API
-      const response = await fetch('http://localhost:3001/api/generate', {
+      const response = await fetch('https://devserver-main--expoinit.netlify.app/api/generate', {
         method: 'POST',
         body: formData,
       });

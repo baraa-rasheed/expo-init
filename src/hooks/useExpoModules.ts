@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://devserver-main--expoinit.netlify.app';
 
 interface ExpoModule {
   id: string;

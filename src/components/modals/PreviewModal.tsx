@@ -7,7 +7,7 @@ import { useExpoStore } from '@/store/useExpoStore';
 import { Download, Copy, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://devserver-main--expoinit.netlify.app';
 
 interface PreviewModalProps {
   open: boolean;

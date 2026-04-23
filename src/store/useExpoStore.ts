@@ -150,7 +150,7 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
     
     // Fetch template's default configs
     try {
-      const response = await fetch(`http://localhost:3001/api/template-preview/${template}`);
+      const response = await fetch(`https://devserver-main--expoinit.netlify.app/api/template-preview/${template}`);
       if (response.ok) {
         const { appJson, packageJson } = await response.json();
         

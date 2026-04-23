@@ -70,7 +70,7 @@ export function AddModulesModal({ open, onOpenChange, modules, selectedModules, 
     
     setLoadingDetails(moduleId);
     try {
-      const response = await fetch(`http://localhost:3001/api/module-details/${moduleId}`);
+      const response = await fetch(`https://devserver-main--expoinit.netlify.app/api/module-details/${moduleId}`);
       if (response.ok) {
         const details = await response.json();
         setModuleDetails(prev => ({ ...prev, [moduleId]: details }));
