@@ -31,11 +31,11 @@ function App() {
   
   const { modules } = useExpoModules();
 
-  const handleModulesConfirm = (selectedIds: string[], modulesData: any[]) => {
+  const handleModulesConfirm = (_: string[], modulesData: any[]) => {
     setSelectedModules(modulesData);
   };
 
-  const handleDependenciesConfirm = (selectedIds: string[], depsData: any[]) => {
+  const handleDependenciesConfirm = (_: string[], depsData: any[]) => {
     setSelectedDependencies(depsData);
   };
 

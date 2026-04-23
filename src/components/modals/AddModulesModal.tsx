@@ -4,10 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useState, useEffect } from 'react';
-import { Search, Package, Boxes, Zap, Database, Palette, Code2, Workflow, Sparkles, Settings, Loader2, ExternalLink } from 'lucide-react';
+import { Label } from '@/components/ui/label'; 
+import { Search, Package, Boxes, Zap, Database, Palette, Code2, Workflow, Sparkles, Loader2, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
 
 interface AddModulesModalProps {
   open: boolean;
@@ -353,7 +352,7 @@ export function AddModulesModal({ open, onOpenChange, modules, selectedModules, 
                               <Input
                                 value={currentValue}
                                 onChange={(e) => {
-                                  setModuleConfigs(prev => ({
+                                  setModuleConfigs((prev:any) => ({
                                     ...prev,
                                     [selectedModule.id]: {
                                       ...prev[selectedModule.id],
@@ -411,7 +410,7 @@ export function AddModulesModal({ open, onOpenChange, modules, selectedModules, 
                                   <Checkbox
                                     checked={currentValue}
                                     onCheckedChange={(checked) => {
-                                      setModuleConfigs(prev => ({
+                                      setModuleConfigs((prev:any) => ({
                                         ...prev,
                                         [selectedModule.id]: {
                                           ...prev[selectedModule.id],
@@ -430,7 +429,7 @@ export function AddModulesModal({ open, onOpenChange, modules, selectedModules, 
                                   value={currentValue}
                                   onChange={(e) => {
                                     const value = config.type === 'number' ? Number(e.target.value) : e.target.value;
-                                    setModuleConfigs(prev => ({
+                                    setModuleConfigs((prev:any) => ({
                                       ...prev,
                                       [selectedModule.id]: {
                                         ...prev[selectedModule.id],

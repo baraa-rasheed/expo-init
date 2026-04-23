@@ -11,8 +11,8 @@ import { AddModulesModal } from '@/components/modals/AddModulesModal';
 import { AddDependenciesModal } from '@/components/modals/AddDependenciesModal';
 import { GenerateModal } from '@/components/modals/GenerateModal';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, Download, Plus, X, Package, Boxes, Eye } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Rocket, Download, X, Package, Boxes, Eye } from 'lucide-react';
 
 function App() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -33,11 +33,11 @@ function App() {
   
   const { modules } = useExpoModules();
 
-  const handleModulesConfirm = (selectedIds: string[], modulesData: any[]) => {
+  const handleModulesConfirm = (_: string[], modulesData: any[]) => {
     setSelectedModules(modulesData);
   };
 
-  const handleDependenciesConfirm = (selectedIds: string[], depsData: any[]) => {
+  const handleDependenciesConfirm = (_: string[], depsData: any[]) => {
     setSelectedDependencies(depsData);
   };
 

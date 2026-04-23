@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useExpoStore } from '@/store/useExpoStore';
-import { Upload, X, ImageIcon, Sparkles, Layers, Eye, FileCode, Layout, Package2, Code2 } from 'lucide-react';
+import {  X, ImageIcon, Sparkles, Layers, Eye, FileCode, Layout, Package2, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { ExpoTemplate } from '@/types/expo';
-import { Separator } from '@radix-ui/react-select';
+import type { ExpoTemplate } from '@/types/expo'; 
 
 const templates: { value: ExpoTemplate; label: string; description: string; icon: any }[] = [
   { value: 'blank', label: 'Blank', description: 'A minimal app with a single screen', icon: FileCode },
@@ -27,11 +26,7 @@ export function ConfigSection({ onViewJson }: ConfigSectionProps = {}) {
     template,
     setTemplate,
     config,
-    updateAppName,
-    updateAppSlug,
-    updateAppVersion,
-    iconFile,
-    splashFile,
+    updateAppName, 
     useHermesV1,
     packageManager,
     setUseHermesV1,

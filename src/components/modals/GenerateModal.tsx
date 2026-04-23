@@ -27,7 +27,7 @@ export function GenerateModal({ open, onOpenChange, onComplete }: GenerateModalP
     { id: 'finalize', label: 'Finalizing project', status: 'pending' },
   ]);
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const [_, setCurrentStepIndex] = useState(-1);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +95,7 @@ export function GenerateModal({ open, onOpenChange, onComplete }: GenerateModalP
         </DialogHeader>
 
         <div className="space-y-3 py-4">
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <div
               key={step.id}
               className={`flex items-center gap-3 p-3 rounded-lg transition-all ${

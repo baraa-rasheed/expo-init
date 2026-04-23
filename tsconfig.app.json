@@ -13,8 +13,7 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
-    "baseUrl": ".",
+    "jsx": "react-jsx", 
     "paths": {
       "@/*": ["./src/*"]
     },

@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Rocket, Download, Search, X, Plus } from 'lucide-react';
+import { Rocket, Download, Search, X } from 'lucide-react';
 import type { ExpoTemplate } from '@/types/expo';
 
 const templates: { value: ExpoTemplate; label: string }[] = [
