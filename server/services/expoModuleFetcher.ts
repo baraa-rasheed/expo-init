@@ -206,8 +206,17 @@ export async function fetchModuleDetailsWithConfig(moduleId: string): Promise<Ex
 }
 
 async function fetchAllExpoModules(): Promise<Record<string, ExpoModule[]>> {
-  const results = await Promise.all(EXPO_SDK_MODULES.map((m) => fetchModuleDetails(m)));
-  const valid = results.filter((m): m is ExpoModule => m !== null);
+  // Avoid huge concurrent HTML parses (can OOM on small Fly machines).
+  const CONCURRENCY = 4;
+  const valid: ExpoModule[] = [];
+
+  for (let i = 0; i < EXPO_SDK_MODULES.length; i += CONCURRENCY) {
+    const batch = EXPO_SDK_MODULES.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map((m) => fetchModuleDetails(m)));
+    for (const m of results) {
+      if (m) valid.push(m);
+    }
+  }
 
   return valid.reduce<Record<string, ExpoModule[]>>((acc, module) => {
     if (!acc[module.category]) acc[module.category] = [];
