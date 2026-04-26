@@ -35,7 +35,7 @@ export function AppJsonModal({ open, onOpenChange }: AppJsonModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh]">
+      <DialogContent className="w-[96vw] sm:w-[80vw] lg:w-[50vw] max-w-none sm:max-w-none h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit app.json</DialogTitle>
           <DialogDescription>
@@ -43,11 +43,11 @@ export function AppJsonModal({ open, onOpenChange }: AppJsonModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
           <Textarea
             value={jsonString}
             onChange={(e) => setJsonString(e.target.value)}
-            className="font-mono text-xs min-h-[500px] resize-none"
+            className="font-mono text-xs flex-1 min-h-0 resize-none"
             placeholder="Enter valid JSON..."
           />
 
@@ -58,7 +58,7 @@ export function AppJsonModal({ open, onOpenChange }: AppJsonModalProps) {
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end flex-shrink-0">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               <X className="mr-2 h-4 w-4" />
               Cancel

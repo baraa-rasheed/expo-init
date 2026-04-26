@@ -1,125 +1,128 @@
 # ExpoInit
 
-A modern, developer-focused web application for generating Expo project configurations. Built with React, TypeScript, and shadcn/ui, ExpoInit provides a Spring Initializr-like experience for Expo projects.
+A web UI for scaffolding [Expo](https://expo.dev) projects with a curated set
+of modules, dependencies, and `app.json` configuration. Pick a template,
+toggle the modules you need, customize their permissions, and download a
+ready-to-run zip.
+
+Built with [React Router (framework mode)](https://reactrouter.com/), Tailwind
+CSS v4, and shadcn/ui.
+
+**Live**: [expoinit.app](https://expoinit.app)
 
 ## Features
 
-- **Template Selection**: Choose from various Expo project templates (blank, tabs, bare-minimum, blank-typescript)
-- **App Configuration**: Configure app name, slug, version, icon, and splash screen with instant updates
-- **Expo Modules Modal**: Beautiful card-based selection of Expo modules with automatic permission handling
-  - Image Picker
-  - Location
-  - Notifications
-  - Camera
-  - Haptics
-  - Visual selection indicators and package badges
-- **Dependencies Modal**: Card-based interface for adding popular packages
-  - Zustand, Redux Toolkit, React Navigation
-  - React Hook Form, Axios, TanStack Query
-  - One-click selection with version display
-- **Preview Modal**: Full-screen preview with tabs for `app.json` and `package.json`
-  - Copy to clipboard functionality
-  - Download both files with one click
-  - Syntax-highlighted display
-- **Project Summary**: Real-time stats showing modules, dependencies, and plugins
-- **Non-Scrollable Layout**: Clean, viewport-contained design with strategic overflow
-- **Dark/Light Mode**: Toggle between themes with system preference support
+- **Templates** – Choose from Expo's official templates (Blank, Tabs, Bare,
+  TypeScript) or the latest SDK starter.
+- **Modules** – Browse all `expo-*` modules grouped by category, with up-to-date
+  data fetched from the Expo docs and npm registry.
+- **Dependencies** – Curated list of common React Native dependencies grouped
+  by category (state management, navigation, networking, forms, animations,
+  UI, utilities).
+- **Permission & plugin config** – Configure each module's `app.json` plugin
+  block and iOS/Android permission strings.
+- **`app.json` editor** – Edit the generated `app.json` directly before
+  downloading.
+- **One-click generate** – Download the project as a zip with everything
+  wired up: dependencies installed in `package.json`, plugins and permissions
+  in `app.json`, optional icon and splash assets included.
+- **⌘K command palette** – Quick search across modules and dependencies.
 
-## Tech Stack
-
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **React Router** - Routing
-- **Zustand** - State management
-- **shadcn/ui** - UI components
-- **Tailwind CSS** - Styling
-- **Lucide React** - Icons
-
-## Getting Started
-
-### Installation
+## Quick start
 
 ```bash
+git clone https://github.com/baraa-rasheed/expo-init.git
+cd expo-init
 npm install
-```
-
-### Development
-
-```bash
+cp .env.example .env
 npm run dev
 ```
 
-Visit `http://localhost:5173` to see the app.
+Then open [http://localhost:5173](http://localhost:5173).
 
-### Build
+## Scripts
+
+| Script              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `npm run dev`       | Start the React Router dev server with HMR.         |
+| `npm run build`     | Build the production bundle.                        |
+| `npm run start`     | Run the production server (serves `./build`).       |
+| `npm run typecheck` | Generate route types and run `tsc`.                 |
+| `npm run format`    | Run Prettier on the project.                        |
+
+## Environment variables
+
+| Variable       | Description                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `PORT`         | Port the production server listens on. Defaults to `3000`.                                                 |
+| `VITE_API_URL` | Optional. Override the API base URL when the web UI is hosted on a different origin from the API routes. |
+
+Copy `.env.example` to `.env` and fill in any overrides you need. Only
+variables prefixed with `VITE_` are exposed to the browser.
+
+## Project structure
+
+```
+.
+├── app/                    # React Router framework entry
+│   ├── app.css             # Global styles + Tailwind v4 theme
+│   ├── root.tsx            # Document layout + ErrorBoundary
+│   ├── routes.ts           # Route registry (UI + API)
+│   └── routes/             # UI + API routes (framework mode)
+│       ├── home.tsx        # Renders the main app
+│       └── api.*.ts        # API endpoints (modules/templates/generate/etc.)
+├── public/                 # Static assets (favicon, icons)
+├── server/services/        # Server-side services used by API routes
+│   ├── expoModuleFetcher.ts
+│   ├── projectGenerator.ts
+│   └── templateFetcher.ts
+└── src/
+    ├── App.tsx             # Top-level UI shell
+    ├── components/         # UI components (sections, modals, shadcn ui)
+    ├── config/             # Static configuration (modules, deps, defaults)
+    ├── flows/              # Flow registry (open-source flows)
+    ├── hooks/              # React hooks (data fetching, etc.)
+    ├── store/              # Zustand store
+    └── types/              # Shared TypeScript types
+```
+
+API routes live under `/api/*` and are colocated with the UI in the same
+React Router server. See `app/routes.ts` for the full list.
+
+## Deployment
+
+The project ships as a standard React Router framework-mode app. The
+production server is `@react-router/serve` (Node).
+
+### Node host (Fly.io, Render, Railway, etc.)
 
 ```bash
+npm install
 npm run build
+npm run start    # respects PORT, defaults to 3000
 ```
 
-### Preview Production Build
+### Docker
+
+A multi-stage `Dockerfile` is included.
 
 ```bash
-npm run preview
+docker build -t expo-init .
+docker run --rm -p 3000:3000 expo-init
 ```
 
-## Project Structure
+The image runs as the non-root `node` user and exposes port `3000`. Set
+`PORT` to override.
 
-```
-src/
-├── components/
-│   ├── sections/          # UI sections
-│   │   ├── TemplateSection.tsx
-│   │   ├── ConfigSection.tsx
-│   │   ├── ModulesSection.tsx
-│   │   ├── DependenciesSection.tsx
-│   │   ├── JsonEditorSection.tsx
-│   │   └── PreviewSection.tsx
-│   ├── ui/                # shadcn/ui components
-│   ├── theme-provider.tsx
-│   └── theme-toggle.tsx
-├── config/
-│   ├── defaults.ts        # Default configurations
-│   ├── modules.ts         # Expo modules registry
-│   └── dependencies.ts    # Available dependencies
-├── store/
-│   └── useExpoStore.ts    # Zustand store
-├── types/
-│   └── expo.ts            # TypeScript types
-├── lib/
-│   └── utils.ts           # Utility functions
-├── App.tsx
-└── main.tsx
-```
+> Project generation calls out to `npx create-expo-app@latest` and uses the
+> system `/tmp` directory. If you deploy to a read-only filesystem, mount a
+> writable volume there or fork `server/services/projectGenerator.ts` to
+> change the location.
 
-## How It Works
+## Contributing
 
-### Module System
-
-Each Expo module follows a registry pattern with:
-- **id**: Unique identifier
-- **label**: Display name
-- **description**: Module description
-- **packages**: NPM packages to install
-- **applyConfig**: Function to modify app.json (adds plugins, permissions, etc.)
-- **revertConfig**: Function to revert changes when module is deselected
-
-### State Management
-
-The app uses Zustand for global state management with the following features:
-- Template selection
-- App configuration (name, slug, version, etc.)
-- Selected modules and dependencies
-- Live JSON editing with validation
-- Automatic synchronization between UI and JSON
-
-### Configuration Generation
-
-The app generates two files:
-1. **app.json**: Expo configuration with plugins, permissions, and settings
-2. **package.json**: NPM dependencies and scripts
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Issues and PRs are welcome.
 
 ## License
 
-MIT
+[MIT](./LICENSE)

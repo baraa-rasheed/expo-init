@@ -2,120 +2,110 @@ import { useState } from 'react';
 import { useExpoStore } from '@/store/useExpoStore';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ConfigSection } from '@/components/sections/ConfigSection';
+import { SelectedItemsSection } from '@/components/sections/SelectedItemsSection';
 import { useExpoModules } from '@/hooks/useExpoModules';
-import { dependenciesByCategory } from '@/config/dependencies';
 import { PreviewModal } from '@/components/modals/PreviewModal';
 import { AppJsonModal } from '@/components/modals/AppJsonModal';
-import { PackageJsonModal } from '@/components/modals/PackageJsonModal';
-import { AddModulesModal } from '@/components/modals/AddModulesModal';
-import { AddDependenciesModal } from '@/components/modals/AddDependenciesModal';
-import { GenerateModal } from '@/components/modals/GenerateModal';
+import { ModuleConfigModal, type ModuleConfiguration } from '@/components/modals/ModuleConfigModal';
+import { AddPalette } from '@/components/AddPalette';
+import { API_URL } from '@/config/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, Download, X, Package, Boxes, Eye } from 'lucide-react';
+import { ExpoIcon } from '@/components/icons/ExpoIcon';
+import { Download, Package, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 function App() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showAppJsonModal, setShowAppJsonModal] = useState(false);
-  const [showPackageJsonModal, setShowPackageJsonModal] = useState(false);
-  const [showModulesModal, setShowModulesModal] = useState(false);
-  const [showDependenciesModal, setShowDependenciesModal] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  
-  const { 
-    selectedModules, 
-    selectedDependencies, 
+  const [showAddPalette, setShowAddPalette] = useState(false);
+  const [showModuleConfig, setShowModuleConfig] = useState(false);
+  const [activeModuleForConfig, setActiveModuleForConfig] = useState<any | null>(null);
+
+  const {
+    selectedModules,
+    selectedDependencies,
     setSelectedModules,
-    setSelectedDependencies,
     removeModule,
-    removeDependency
+    removeDependency,
+    toggleDependency,
   } = useExpoStore();
-  
+
   const { modules } = useExpoModules();
 
-  const handleModulesConfirm = (_: string[], modulesData: any[]) => {
-    setSelectedModules(modulesData);
-  };
-
-  const handleDependenciesConfirm = (_: string[], depsData: any[]) => {
-    setSelectedDependencies(depsData);
-  };
-
-  const handleGenerate = async () => {
+  const fetchModuleDetails = async (moduleId: string) => {
+    const allModulesFlat = Object.values(modules).flat();
+    const base = allModulesFlat.find((m: any) => m.id === moduleId) ?? { id: moduleId, name: moduleId };
     try {
-      const { config, packageJson, iconFile, splashFile, template, selectedModules, selectedDependencies } = useExpoStore.getState();
-      
-      // Create FormData for file uploads
-      const formData = new FormData();
-      formData.append('template', template);
-      formData.append('appName', config.expo.name || 'My Expo App');
-      formData.append('slug', config.expo.slug || 'my-expo-app');
-      formData.append('version', config.expo.version || '1.0.0');
-      formData.append('appConfig', JSON.stringify(config));
-      formData.append('packageConfig', JSON.stringify(packageJson));
-      formData.append('selectedModules', JSON.stringify(Array.from(selectedModules.values())));
-      formData.append('selectedDependencies', JSON.stringify(Array.from(selectedDependencies.values())));
-      
-      if (iconFile) {
-        formData.append('icon', iconFile);
-      }
-      if (splashFile) {
-        formData.append('splash', splashFile);
-      }
-
-      // Call the generate API
-      const response = await fetch('https://devserver-main--expoinit.netlify.app/api/generate', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Generation failed');
-      }
-
-      // Get the blob and trigger download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${config.expo.slug || 'expo-app'}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Generation error:', error);
-      alert('Failed to generate project. Please try again.');
+      const res = await fetch(`${API_URL}/api/module-details/${moduleId}`);
+      if (!res.ok) return base;
+      const details = await res.json();
+      return { ...base, ...details };
+    } catch {
+      return base;
     }
   };
 
+  const handleAddSelect = async (item: any) => {
+    if (item.kind === 'dep') {
+      if (!selectedDependencies.has(item.id)) {
+        toggleDependency(item.id, item.pkg, item.version);
+      }
+      setShowAddPalette(false);
+      return;
+    }
+
+    if (item.kind === 'module') {
+      if (selectedModules.has(item.id)) {
+        setShowAddPalette(false);
+        return;
+      }
+      const fullModule = await fetchModuleDetails(item.id);
+      const merged = new Map(selectedModules);
+      merged.set(item.id, fullModule);
+      setSelectedModules(Array.from(merged.values()));
+      setShowAddPalette(false);
+    }
+  };
+
+  const openModuleCustomize = async (moduleId: string) => {
+    const current = selectedModules.get(moduleId);
+    const full = current?.permissions ? current : await fetchModuleDetails(moduleId);
+    setActiveModuleForConfig(full);
+    setShowModuleConfig(true);
+  };
+
+  const handleModuleConfigConfirm = (cfg: ModuleConfiguration) => {
+    if (!activeModuleForConfig) return;
+
+    const updatedModule = {
+      ...activeModuleForConfig,
+      configuredPermissions: cfg.permissions?.ios?.reduce((acc, perm) => {
+        acc[perm] =
+          cfg.permissionDescriptions?.ios?.[perm] ??
+          activeModuleForConfig.configuredPermissions?.[perm] ??
+          `This app needs ${perm}`;
+        return acc;
+      }, {} as Record<string, string>),
+      configuredPluginConfig: cfg.plugins?.[0]?.config ?? {},
+      needsPlugin: cfg.plugins?.length > 0,
+      permissions: cfg.permissions,
+    };
+
+    const merged = new Map(selectedModules);
+    merged.set(updatedModule.id, updatedModule);
+    setSelectedModules(Array.from(merged.values()));
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/5">
-      {/* Header */}
-      <header className="flex-shrink-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-primary to-primary/70 rounded-xl shadow-lg shadow-primary/20">
-              <Rocket className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">ExpoInit</h1>
-              <p className="text-xs text-muted-foreground">Professional project generator</p>
-            </div>
+    <div className="h-screen flex flex-col bg-background">
+      <header className="flex-shrink-0 w-full border-b bg-background">
+        <div className="mx-auto max-w-[1400px] px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ExpoIcon className="h-5 w-5 text-primary" />
+            <div className="font-semibold tracking-tight">ExpoInit</div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPreviewModal(true)}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
-            <Button
-              onClick={() => setShowGenerateModal(true)}
-              className="shadow-lg shadow-primary/20"
-            >
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowPreviewModal(true)}>
               <Download className="h-4 w-4 mr-2" />
               Generate
             </Button>
@@ -124,171 +114,84 @@ function App() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-6 py-8 max-w-[1400px] h-full">
-          {/* Two Column Layout - Right side wider */}
-          <div className="grid grid-cols-1 lg:grid-cols-[4fr_1px_2fr] gap-6 h-full">
-          {/* Left Column - Configuration */}
-          <div className="overflow-y-auto">
-            <ConfigSection onViewJson={() => setShowAppJsonModal(true)} />
-          </div>
+      <main className="flex-1 min-h-0">
+        <div className="mx-auto max-w-[1400px] h-full px-6">
+          <div className="h-full flex flex-col lg:flex-row gap-6 py-6">
+            <motion.section
+              className="flex-1 lg:flex-[2.8] min-w-0 overflow-y-auto"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.9 }}
+            >
+              <ConfigSection onViewJson={() => setShowAppJsonModal(true)} />
+            </motion.section>
 
-          {/* Vertical Separator */}
-          <div className="hidden lg:block border-l" />
+            <div className="hidden lg:block w-px bg-border self-stretch" aria-hidden="true" />
 
-          {/* Right Column - Selected Items */}
-          <div className="overflow-y-auto">
-            <Card className="border-0 shadow-none bg-transparent">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Dependencies</CardTitle>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setShowModulesModal(true)}>
-                      <Boxes className="h-3.5 w-3.5 mr-1" />
-                      Add Modules
-                    </Button>
-                    <Button size="sm" onClick={() => setShowDependenciesModal(true)}>
-                      <Package className="h-3.5 w-3.5 mr-1" />
-                      Add Deps
-                    </Button>
+            <motion.aside
+              className="lg:w-[360px] xl:w-[400px] overflow-y-auto"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.9, delay: 0.06 }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold">Dependencies</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {selectedModules.size + selectedDependencies.size} selected
                   </div>
                 </div>
-              </CardHeader>
-              <div className="border-t" />
-              <CardContent>
+
+                <div className="flex flex-col items-end gap-1">
+                  <Button size="sm" variant="outline" onClick={() => setShowAddPalette(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                  <div className="text-[11px] text-muted-foreground/70">
+                    Shortcut: <span className="font-mono">⌘K / Ctrl K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t" />
+
+              <div className="pt-4">
                 {selectedModules.size === 0 && selectedDependencies.size === 0 ? (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center text-sm text-muted-foreground">
-                      <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                      <p className="font-medium">No dependencies selected</p>
-                      <p className="text-xs mt-1">Add modules or dependencies to get started</p>
-                    </div>
+                  <div className="py-12 text-center text-sm text-muted-foreground">
+                    <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                    <div className="font-medium text-foreground">No dependencies selected</div>
+                    <div className="text-xs mt-1">Add modules or dependencies to get started</div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Expo Modules Section */}
-                    {selectedModules.size > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Boxes className="h-4 w-4 text-primary" />
-                          <h3 className="text-sm font-semibold">Expo Modules</h3>
-                          <span className="text-xs text-muted-foreground">({selectedModules.size})</span>
-                        </div>
-                        <div className="space-y-2">
-                          {Array.from(selectedModules.values()).map((module: any) => (
-                            <div
-                              key={module.id}
-                              className="relative flex items-center gap-4 p-4 rounded-xl border hover:border-muted hover:shadow-md transition-all group"
-                            >
-                              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex-shrink-0">
-                                <Boxes className="h-7 w-7 text-purple-700 dark:text-purple-300" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold truncate text-foreground">{module.name}</p>
-                                <p className="text-xs text-muted-foreground truncate font-mono">
-                                  {module.id}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => removeModule(module.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-destructive/10 rounded-lg"
-                              >
-                                <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Dependencies Section */}
-                    {selectedDependencies.size > 0 && (
-                      <div className="space-y-4">
-                        {Object.entries(dependenciesByCategory).map(([category, deps]) => {
-                          const selectedInCategory = deps.filter((dep: any) => selectedDependencies.has(dep.id));
-                          if (selectedInCategory.length === 0) return null;
-                          
-                          // Color mapping for each category
-                          const categoryColors: Record<string, { icon: string; bg: string; text: string; darkBg: string; darkText: string }> = {
-                            'State Management': { icon: 'text-blue-500', bg: 'bg-blue-100', text: 'text-blue-700', darkBg: 'dark:bg-blue-900/40', darkText: 'dark:text-blue-300' },
-                            'Navigation': { icon: 'text-green-500', bg: 'bg-green-100', text: 'text-green-700', darkBg: 'dark:bg-green-900/40', darkText: 'dark:text-green-300' },
-                            'APIs & Networking': { icon: 'text-orange-500', bg: 'bg-orange-100', text: 'text-orange-700', darkBg: 'dark:bg-orange-900/40', darkText: 'dark:text-orange-300' },
-                            'Forms & Validation': { icon: 'text-pink-500', bg: 'bg-pink-100', text: 'text-pink-700', darkBg: 'dark:bg-pink-900/40', darkText: 'dark:text-pink-300' },
-                            'Animations': { icon: 'text-violet-500', bg: 'bg-violet-100', text: 'text-violet-700', darkBg: 'dark:bg-violet-900/40', darkText: 'dark:text-violet-300' },
-                            'UI Components': { icon: 'text-cyan-500', bg: 'bg-cyan-100', text: 'text-cyan-700', darkBg: 'dark:bg-cyan-900/40', darkText: 'dark:text-cyan-300' },
-                            'Utilities': { icon: 'text-gray-500', bg: 'bg-gray-100', text: 'text-gray-700', darkBg: 'dark:bg-gray-900/40', darkText: 'dark:text-gray-300' },
-                          };
-                          
-                          const colors = categoryColors[category] || categoryColors['Utilities'];
-                          
-                          return (
-                            <div key={category} className="space-y-2">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Package className={`h-4 w-4 ${colors.icon}`} />
-                                <h3 className="text-sm font-semibold">{category}</h3>
-                                <span className="text-xs text-muted-foreground">({selectedInCategory.length})</span>
-                              </div>
-                              <div className="space-y-2">
-                                {selectedInCategory.map((dep: any) => (
-                      <div
-                        key={dep.id}
-                        className="relative flex items-center gap-4 p-4 rounded-xl border hover:border-muted hover:shadow-md transition-all group"
-                      >
-                        <div className={`flex items-center justify-center w-14 h-14 rounded-xl ${colors.bg} ${colors.darkBg} flex-shrink-0`}>
-                          <Package className={`h-7 w-7 ${colors.text} ${colors.darkText}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate text-foreground">{dep.label}</p>
-                          <p className="text-xs text-muted-foreground truncate font-mono">
-                            {dep.package}@{dep.version}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeDependency(dep.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-destructive/10 rounded-lg"
-                        >
-                          <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </button>
-                      </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  <SelectedItemsSection
+                    selectedModules={selectedModules}
+                    selectedDependencies={selectedDependencies}
+                    onRemoveModule={removeModule}
+                    onRemoveDependency={removeDependency}
+                    onCustomizeModule={openModuleCustomize}
+                  />
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </motion.aside>
           </div>
         </div>
       </main>
 
-      {/* Modals */}
-      <GenerateModal 
-        open={showGenerateModal} 
-        onOpenChange={setShowGenerateModal}
-        onComplete={handleGenerate}
-      />
       <PreviewModal open={showPreviewModal} onOpenChange={setShowPreviewModal} />
       <AppJsonModal open={showAppJsonModal} onOpenChange={setShowAppJsonModal} />
-      <PackageJsonModal open={showPackageJsonModal} onOpenChange={setShowPackageJsonModal} />
-      <AddModulesModal
-        open={showModulesModal}
-        onOpenChange={setShowModulesModal}
-        modules={modules}
-        selectedModules={new Set(selectedModules.keys())}
-        onConfirm={handleModulesConfirm}
+      <AddPalette
+        open={showAddPalette}
+        onOpenChange={setShowAddPalette}
+        onSelectItem={handleAddSelect}
+        modulesByCategory={modules}
+        selectedModuleIds={new Set(Array.from(selectedModules.keys()))}
+        selectedDependencyIds={new Set(Array.from(selectedDependencies.keys()))}
       />
-      <AddDependenciesModal
-        open={showDependenciesModal}
-        onOpenChange={setShowDependenciesModal}
-        dependencies={dependenciesByCategory}
-        selectedDependencies={new Set(selectedDependencies.keys())}
-        onConfirm={handleDependenciesConfirm}
+      <ModuleConfigModal
+        open={showModuleConfig}
+        onOpenChange={setShowModuleConfig}
+        module={activeModuleForConfig}
+        onConfirm={handleModuleConfigConfirm}
       />
     </div>
   );

@@ -40,6 +40,8 @@ export interface PackageJson {
   scripts?: Record<string, string>;
   dependencies: Record<string, string>;
   devDependencies?: Record<string, string>;
+  overrides?: Record<string, string>;
+  resolutions?: Record<string, string>;
 }
 
 export interface ExpoModule {

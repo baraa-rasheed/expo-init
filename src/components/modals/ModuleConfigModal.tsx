@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, ExternalLink } from 'lucide-react';
 
 interface ModuleConfigModalProps {
   open: boolean;
@@ -20,6 +20,9 @@ export interface ModuleConfiguration {
     ios: string[];
     android: string[];
   };
+  permissionDescriptions?: {
+    ios?: Record<string, string>;
+  };
   plugins: Array<{
     name: string;
     config?: Record<string, any>;
@@ -31,6 +34,7 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
   const [iosPermissions, setIosPermissions] = useState<string[]>([]);
   const [androidPermissions, setAndroidPermissions] = useState<string[]>([]);
   const [pluginConfig, setPluginConfig] = useState<Record<string, any>>({});
+  const [iosPermissionDescriptions, setIosPermissionDescriptions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (module && open) {
@@ -46,6 +50,14 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
         });
       }
       setPluginConfig(initialPluginConfig);
+
+      const initialDescriptions: Record<string, string> = {};
+      const perms: string[] = module.permissions?.ios || [];
+      perms.forEach((perm: string) => {
+        initialDescriptions[perm] =
+          module.configuredPermissions?.[perm] ?? `This app needs ${perm}`;
+      });
+      setIosPermissionDescriptions(initialDescriptions);
     }
   }, [module, open]);
 
@@ -57,6 +69,12 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
       permissions: {
         ios: iosPermissions,
         android: androidPermissions,
+      },
+      permissionDescriptions: {
+        ios: iosPermissions.reduce((acc, perm) => {
+          acc[perm] = iosPermissionDescriptions?.[perm] ?? `This app needs ${perm}`;
+          return acc;
+        }, {} as Record<string, string>),
       },
       plugins: module.needsPlugin ? [
         {
@@ -71,6 +89,8 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
   };
 
   if (!module) return null;
+
+  const docsUrl = `https://docs.expo.dev/versions/latest/sdk/${String(module.id).replace(/^expo-/, '')}/`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,6 +107,28 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
 
         <ScrollArea className="max-h-[50vh] pr-4">
           <div className="space-y-6">
+            <div className="p-4 bg-muted/50 rounded-md">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">{module.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{module.description}</div>
+                  <div className="text-xs text-muted-foreground font-mono mt-2">
+                    {module.id}
+                    {module.version ? ` • ${module.version}` : ''}
+                    {module.category ? ` • ${module.category}` : ''}
+                  </div>
+                </div>
+                <a
+                  href={docsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
+                >
+                  Expo docs <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+
             {/* Simple install message for modules without config */}
             {!module.needsPlugin && !module.permissions && (
               <div className="p-4 bg-muted rounded-md">
@@ -154,6 +196,13 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
                         checked={iosPermissions.includes(permission)}
                         onCheckedChange={(checked) => {
                           if (checked) {
+                            setIosPermissionDescriptions((prev) => ({
+                              ...prev,
+                              [permission]:
+                                prev?.[permission] ??
+                                module.configuredPermissions?.[permission] ??
+                                `This app needs ${permission}`,
+                            }));
                             setIosPermissions([...iosPermissions, permission]);
                           } else {
                             setIosPermissions(iosPermissions.filter((p) => p !== permission));
@@ -169,6 +218,29 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
                     </div>
                   ))}
                 </div>
+
+                {iosPermissions.length > 0 && (
+                  <div className="pt-2 space-y-3">
+                    <Label className="text-sm font-medium">Permission descriptions (Info.plist)</Label>
+                    <div className="space-y-3">
+                      {iosPermissions.map((perm) => (
+                        <div key={perm} className="space-y-1.5">
+                          <Label htmlFor={`ios-desc-${perm}`} className="text-xs font-mono text-muted-foreground">
+                            {perm}
+                          </Label>
+                          <Input
+                            id={`ios-desc-${perm}`}
+                            value={iosPermissionDescriptions?.[perm] ?? ''}
+                            onChange={(e) =>
+                              setIosPermissionDescriptions((prev) => ({ ...prev, [perm]: e.target.value }))
+                            }
+                            placeholder={`This app needs ${perm}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -220,7 +292,7 @@ export function ModuleConfigModal({ open, onOpenChange, module, onConfirm }: Mod
             Cancel
           </Button>
           <Button onClick={handleConfirm}>
-            Add Module
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

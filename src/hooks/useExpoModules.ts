@@ -1,52 +1,55 @@
 import { useEffect, useState } from 'react';
 
-const API_URL = 'https://devserver-main--expoinit.netlify.app';
+import { API_URL } from '@/config/api';
 
-interface ExpoModule {
+export interface ExpoModule {
   id: string;
   name: string;
   description: string;
   version: string;
-  packages: string[];
   category?: string;
-  hasConfig: boolean;
-  requiredPermissions?: {
+  needsPlugin: boolean;
+  permissions?: {
     ios?: string[];
     android?: string[];
   };
+  pluginConfig?: Record<string, unknown>;
 }
 
+export type ExpoModulesByCategory = Record<string, ExpoModule[]>;
+
 export function useExpoModules() {
-  const [modules, setModules] = useState<Record<string, ExpoModule[]>>({});
+  const [modules, setModules] = useState<ExpoModulesByCategory>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchModules();
-  }, []);
 
   const fetchModules = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`${API_URL}/api/expo-modules`);
-      
       if (!response.ok) {
-        throw new Error('Failed to fetch modules');
+        throw new Error(`Failed to fetch modules: ${response.status}`);
       }
-      
-      const data = await response.json();
+
+      const data = (await response.json()) as ExpoModulesByCategory;
       setModules(data);
     } catch (err) {
-      console.error('Error fetching Expo modules:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch modules');
-      // Fallback to empty object on error
+      const message = err instanceof Error ? err.message : 'Failed to fetch modules';
+      if (import.meta.env.DEV) {
+        console.error('[useExpoModules]', err);
+      }
+      setError(message);
       setModules({});
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchModules();
+  }, []);
 
   return { modules, loading, error, refetch: fetchModules };
 }

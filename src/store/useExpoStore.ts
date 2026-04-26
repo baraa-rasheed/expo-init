@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ExpoConfig, PackageJson, ExpoTemplate } from '@/types/expo';
 import { defaultExpoConfig } from '@/config/defaults';
+import { API_URL } from '@/config/api';
 
 interface ExpoStore {
   template: ExpoTemplate;
@@ -13,7 +14,7 @@ interface ExpoStore {
   useHermesV1: boolean;
   packageManager: 'npm' | 'yarn' | 'pnpm' | 'bun';
   
-  setTemplate: (template: ExpoTemplate) => void;
+  setTemplate: (template: ExpoTemplate) => Promise<void>;
   setUseHermesV1: (enabled: boolean) => void;
   setPackageManager: (manager: 'npm' | 'yarn' | 'pnpm' | 'bun') => void;
   updateConfig: (config: ExpoConfig) => void;
@@ -150,20 +151,23 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
     
     // Fetch template's default configs
     try {
-      const response = await fetch(`https://devserver-main--expoinit.netlify.app/api/template-preview/${template}`);
+      const response = await fetch(`${API_URL}/api/template-preview/${template}`);
       if (response.ok) {
         const { appJson, packageJson } = await response.json();
         
-        // Update config with template's app.json (merge with user's app name/slug/version)
+        // Update config with template's app.json while preserving user edits
+        // and any config derived from other UI (modules, permissions, Hermes, etc).
         const currentConfig = get().config;
         const mergedConfig = {
           ...appJson,
+          ...currentConfig,
           expo: {
             ...appJson.expo,
+            ...currentConfig.expo,
             name: currentConfig.expo.name,
             slug: currentConfig.expo.slug,
             version: currentConfig.expo.version,
-          }
+          },
         };
         
         // Update packageJson with template's package.json
@@ -189,35 +193,122 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
   
   setUseHermesV1: (enabled) => {
     set({ useHermesV1: enabled });
-    
-    // Update package.json with Hermes V1 compiler override if enabled
-    if (enabled) {
-      const { packageJson, packageManager } = get();
-      const newPackageJson = JSON.parse(JSON.stringify(packageJson));
-      
-      // Add hermes-compiler override based on package manager
-      const hermesVersion = '1.0.0-rc.1';
-      if (packageManager === 'yarn') {
-        newPackageJson.resolutions = newPackageJson.resolutions || {};
-        newPackageJson.resolutions['hermes-compiler'] = hermesVersion;
-      } else {
-        // npm, pnpm, bun use 'overrides'
-        newPackageJson.overrides = newPackageJson.overrides || {};
-        newPackageJson.overrides['hermes-compiler'] = hermesVersion;
+
+    // SDK 55 Hermes V1 opt-in:
+    // - app.json: add expo-build-properties plugin with { buildReactNativeFromSource: true, useHermesV1: true }
+    // - package.json: pin hermes-compiler to 250829098.0.4 via overrides/resolutions
+    const { config, packageJson, packageManager } = get();
+
+    // Update app.json (config) for expo-build-properties plugin + keep JS engine hermes.
+    {
+      const newConfig = JSON.parse(JSON.stringify(config));
+      if (!newConfig.expo) newConfig.expo = {};
+
+      if (enabled && newConfig.expo.jsEngine !== 'hermes') {
+        newConfig.expo.jsEngine = 'hermes';
       }
-      
-      set({ packageJson: newPackageJson });
-    } else {
-      // Remove hermes-compiler override
-      const { packageJson, packageManager } = get();
-      const newPackageJson = JSON.parse(JSON.stringify(packageJson));
-      
-      if (packageManager === 'yarn') {
-        delete newPackageJson.resolutions?.['hermes-compiler'];
+
+      const pluginName = 'expo-build-properties';
+      const desiredOptions = {
+        buildReactNativeFromSource: true,
+        useHermesV1: true,
+      };
+
+      const plugins: any[] = Array.isArray(newConfig.expo.plugins) ? newConfig.expo.plugins : [];
+      const nextPlugins: any[] = [...plugins];
+
+      const findIndex = () =>
+        nextPlugins.findIndex((p: any) => {
+          if (typeof p === 'string') return p === pluginName;
+          const name = Array.isArray(p) ? p[0] : undefined;
+          return name === pluginName;
+        });
+
+      const idx = findIndex();
+
+      if (enabled) {
+        if (idx === -1) {
+          nextPlugins.push([pluginName, desiredOptions]);
+        } else {
+          const existing = nextPlugins[idx];
+          if (typeof existing === 'string') {
+            nextPlugins[idx] = [pluginName, desiredOptions];
+          } else if (Array.isArray(existing)) {
+            const existingOptions = typeof existing[1] === 'object' && existing[1] ? existing[1] : {};
+            nextPlugins[idx] = [
+              pluginName,
+              {
+                ...existingOptions,
+                ...desiredOptions,
+              },
+            ];
+          } else {
+            nextPlugins[idx] = [pluginName, desiredOptions];
+          }
+        }
+        newConfig.expo.plugins = nextPlugins;
       } else {
-        delete newPackageJson.overrides?.['hermes-compiler'];
+        // Disable Hermes V1: remove keys from expo-build-properties (or remove the plugin if it becomes empty).
+        if (idx !== -1) {
+          const existing = nextPlugins[idx];
+          if (Array.isArray(existing)) {
+            const existingOptions = typeof existing[1] === 'object' && existing[1] ? { ...existing[1] } : {};
+            delete (existingOptions as any).useHermesV1;
+            delete (existingOptions as any).buildReactNativeFromSource;
+
+            const hasAnyOptions = Object.keys(existingOptions).length > 0;
+            if (hasAnyOptions) {
+              nextPlugins[idx] = [pluginName, existingOptions];
+            } else {
+              nextPlugins.splice(idx, 1);
+            }
+          } else {
+            // If it was just "expo-build-properties" string, remove it since it can't carry options.
+            nextPlugins.splice(idx, 1);
+          }
+
+          if (nextPlugins.length > 0) newConfig.expo.plugins = nextPlugins;
+          else delete newConfig.expo.plugins;
+        }
       }
-      
+
+      set({ config: newConfig });
+    }
+
+    // Update package.json pinning for hermes-compiler.
+    {
+      const newPackageJson = JSON.parse(JSON.stringify(packageJson));
+      const hermesCompilerVersion = '250829098.0.4';
+
+      if (enabled) {
+        if (packageManager === 'yarn') {
+          newPackageJson.resolutions = newPackageJson.resolutions || {};
+          newPackageJson.resolutions['hermes-compiler'] = hermesCompilerVersion;
+          // Avoid having both fields set for the same package.
+          if (newPackageJson.overrides) {
+            delete newPackageJson.overrides['hermes-compiler'];
+            if (Object.keys(newPackageJson.overrides).length === 0) delete newPackageJson.overrides;
+          }
+        } else {
+          newPackageJson.overrides = newPackageJson.overrides || {};
+          newPackageJson.overrides['hermes-compiler'] = hermesCompilerVersion;
+          if (newPackageJson.resolutions) {
+            delete newPackageJson.resolutions['hermes-compiler'];
+            if (Object.keys(newPackageJson.resolutions).length === 0) delete newPackageJson.resolutions;
+          }
+        }
+      } else {
+        // On disable, remove the pin from whichever field it lives in.
+        if (newPackageJson.resolutions) {
+          delete newPackageJson.resolutions['hermes-compiler'];
+          if (Object.keys(newPackageJson.resolutions).length === 0) delete newPackageJson.resolutions;
+        }
+        if (newPackageJson.overrides) {
+          delete newPackageJson.overrides['hermes-compiler'];
+          if (Object.keys(newPackageJson.overrides).length === 0) delete newPackageJson.overrides;
+        }
+      }
+
       set({ packageJson: newPackageJson });
     }
   },
@@ -229,17 +320,25 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
     // If Hermes V1 is enabled, migrate the override field
     if (useHermesV1) {
       const newPackageJson = JSON.parse(JSON.stringify(packageJson));
-      const hermesVersion = '1.0.0-rc.1';
+      const hermesVersion = '250829098.0.4';
       
-      // Remove old override field
-      delete newPackageJson.resolutions;
-      delete newPackageJson.overrides;
-      
-      // Add new override field based on manager
+      // Migrate just the hermes-compiler pin between fields (preserve other keys).
+      if (newPackageJson.resolutions) {
+        delete newPackageJson.resolutions['hermes-compiler'];
+        if (Object.keys(newPackageJson.resolutions).length === 0) delete newPackageJson.resolutions;
+      }
+      if (newPackageJson.overrides) {
+        delete newPackageJson.overrides['hermes-compiler'];
+        if (Object.keys(newPackageJson.overrides).length === 0) delete newPackageJson.overrides;
+      }
+
+      // Add new pin based on manager
       if (manager === 'yarn') {
-        newPackageJson.resolutions = { 'hermes-compiler': hermesVersion };
+        newPackageJson.resolutions = newPackageJson.resolutions || {};
+        newPackageJson.resolutions['hermes-compiler'] = hermesVersion;
       } else {
-        newPackageJson.overrides = { 'hermes-compiler': hermesVersion };
+        newPackageJson.overrides = newPackageJson.overrides || {};
+        newPackageJson.overrides['hermes-compiler'] = hermesVersion;
       }
       
       set({ packageJson: newPackageJson });
@@ -269,7 +368,7 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
   },
   
   updateAppName: (name) => {
-    const { config, packageJson } = get();
+    const { config, packageJson, useHermesV1 } = get();
     const newConfig = JSON.parse(JSON.stringify(config));
     const newPackageJson = JSON.parse(JSON.stringify(packageJson));
     
@@ -279,24 +378,79 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
     newConfig.expo.name = name;
     newConfig.expo.slug = slug;
     newPackageJson.name = slug;
+
+    // If Hermes V1 is enabled, keep expo-build-properties plugin pinned even after edits.
+    if (useHermesV1) {
+      const pluginName = 'expo-build-properties';
+      const desiredOptions = { buildReactNativeFromSource: true, useHermesV1: true };
+      const plugins: any[] = Array.isArray(newConfig.expo.plugins) ? newConfig.expo.plugins : [];
+      const nextPlugins: any[] = [...plugins];
+      const idx = nextPlugins.findIndex((p: any) => (typeof p === 'string' ? p === pluginName : Array.isArray(p) && p[0] === pluginName));
+      if (idx === -1) nextPlugins.push([pluginName, desiredOptions]);
+      else {
+        const existing = nextPlugins[idx];
+        if (typeof existing === 'string') nextPlugins[idx] = [pluginName, desiredOptions];
+        else if (Array.isArray(existing)) nextPlugins[idx] = [pluginName, { ...(existing[1] || {}), ...desiredOptions }];
+        else nextPlugins[idx] = [pluginName, desiredOptions];
+      }
+      newConfig.expo.plugins = nextPlugins;
+      if (newConfig.expo.jsEngine !== 'hermes') newConfig.expo.jsEngine = 'hermes';
+    }
     
     set({ config: newConfig, packageJson: newPackageJson });
   },
   
   updateAppSlug: (slug) => {
-    const { config } = get();
+    const { config, useHermesV1 } = get();
     const newConfig = JSON.parse(JSON.stringify(config));
     newConfig.expo.slug = slug;
+
+    // If Hermes V1 is enabled, keep expo-build-properties plugin pinned even after edits.
+    if (useHermesV1) {
+      const pluginName = 'expo-build-properties';
+      const desiredOptions = { buildReactNativeFromSource: true, useHermesV1: true };
+      const plugins: any[] = Array.isArray(newConfig.expo.plugins) ? newConfig.expo.plugins : [];
+      const nextPlugins: any[] = [...plugins];
+      const idx = nextPlugins.findIndex((p: any) => (typeof p === 'string' ? p === pluginName : Array.isArray(p) && p[0] === pluginName));
+      if (idx === -1) nextPlugins.push([pluginName, desiredOptions]);
+      else {
+        const existing = nextPlugins[idx];
+        if (typeof existing === 'string') nextPlugins[idx] = [pluginName, desiredOptions];
+        else if (Array.isArray(existing)) nextPlugins[idx] = [pluginName, { ...(existing[1] || {}), ...desiredOptions }];
+        else nextPlugins[idx] = [pluginName, desiredOptions];
+      }
+      newConfig.expo.plugins = nextPlugins;
+      if (newConfig.expo.jsEngine !== 'hermes') newConfig.expo.jsEngine = 'hermes';
+    }
+
     set({ config: newConfig });
   },
   
   updateAppVersion: (version) => {
-    const { config, packageJson } = get();
+    const { config, packageJson, useHermesV1 } = get();
     const newConfig = JSON.parse(JSON.stringify(config));
     const newPackageJson = JSON.parse(JSON.stringify(packageJson));
     
     newConfig.expo.version = version;
     newPackageJson.version = version;
+
+    // If Hermes V1 is enabled, keep expo-build-properties plugin pinned even after edits.
+    if (useHermesV1) {
+      const pluginName = 'expo-build-properties';
+      const desiredOptions = { buildReactNativeFromSource: true, useHermesV1: true };
+      const plugins: any[] = Array.isArray(newConfig.expo.plugins) ? newConfig.expo.plugins : [];
+      const nextPlugins: any[] = [...plugins];
+      const idx = nextPlugins.findIndex((p: any) => (typeof p === 'string' ? p === pluginName : Array.isArray(p) && p[0] === pluginName));
+      if (idx === -1) nextPlugins.push([pluginName, desiredOptions]);
+      else {
+        const existing = nextPlugins[idx];
+        if (typeof existing === 'string') nextPlugins[idx] = [pluginName, desiredOptions];
+        else if (Array.isArray(existing)) nextPlugins[idx] = [pluginName, { ...(existing[1] || {}), ...desiredOptions }];
+        else nextPlugins[idx] = [pluginName, desiredOptions];
+      }
+      newConfig.expo.plugins = nextPlugins;
+      if (newConfig.expo.jsEngine !== 'hermes') newConfig.expo.jsEngine = 'hermes';
+    }
     
     set({ config: newConfig, packageJson: newPackageJson });
   },
@@ -431,16 +585,18 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
       newPackageJson.dependencies[module.id] = module.version || 'latest';
       
       // Add iOS permissions
-      if (module.permissions?.ios) {
-        module.permissions.ios.forEach((perm: string) => {
+      const iosPerms: string[] = module.permissions?.ios || module.requiredPermissions?.ios || [];
+      if (iosPerms.length > 0) {
+        iosPerms.forEach((perm: string) => {
           const description = module.configuredPermissions?.[perm] || `This app needs ${perm}`;
           newConfig.expo.ios.infoPlist[perm] = description;
         });
       }
       
       // Add Android permissions
-      if (module.permissions?.android) {
-        module.permissions.android.forEach((perm: string) => {
+      const androidPerms: string[] = module.permissions?.android || module.requiredPermissions?.android || [];
+      if (androidPerms.length > 0) {
+        androidPerms.forEach((perm: string) => {
           if (!newConfig.expo.android.permissions.includes(perm)) {
             newConfig.expo.android.permissions.push(perm);
           }
@@ -478,14 +634,41 @@ export const useExpoStore = create<ExpoStore>((set, get) => ({
   },
   
   removeModule: (moduleId) => {
-    const { selectedModules, packageJson } = get();
+    const { selectedModules, packageJson, config } = get();
     const newSelectedModules = new Map(selectedModules);
     const newPackageJson = JSON.parse(JSON.stringify(packageJson));
+    const newConfig = JSON.parse(JSON.stringify(config));
     
     newSelectedModules.delete(moduleId);
     delete newPackageJson.dependencies[moduleId];
+
+    // Keep app.json in sync: remove plugins + permissions added by this module.
+    if (newConfig.expo?.plugins) {
+      newConfig.expo.plugins = newConfig.expo.plugins.filter((p: any) => {
+        const pluginName = typeof p === 'string' ? p : p?.[0];
+        return pluginName !== moduleId;
+      });
+    }
+
+    if (newConfig.expo?.ios?.infoPlist) {
+      const module = selectedModules.get(moduleId);
+      const perms: string[] = module?.permissions?.ios || module?.requiredPermissions?.ios || [];
+      perms.forEach((perm) => {
+        delete newConfig.expo.ios.infoPlist[perm];
+      });
+    }
+
+    if (newConfig.expo?.android?.permissions) {
+      const module = selectedModules.get(moduleId);
+      const perms: string[] = module?.permissions?.android || module?.requiredPermissions?.android || [];
+      if (perms.length > 0) {
+        newConfig.expo.android.permissions = newConfig.expo.android.permissions.filter(
+          (p: string) => !perms.includes(p)
+        );
+      }
+    }
     
-    set({ selectedModules: newSelectedModules, packageJson: newPackageJson });
+    set({ selectedModules: newSelectedModules, packageJson: newPackageJson, config: newConfig });
   },
   
   removeDependency: (depId) => {

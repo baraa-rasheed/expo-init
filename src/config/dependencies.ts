@@ -1,6 +1,43 @@
 import type { DependencyOption } from '@/types/expo';
 
 export const dependenciesByCategory: Record<string, DependencyOption[]> = {
+  'React Native Essentials': [
+    {
+      id: 'safe-area-context',
+      label: 'Safe Area Context',
+      description: 'Safe area insets (required by many RN libs)',
+      package: 'react-native-safe-area-context',
+      version: '^5.6.1',
+    },
+    {
+      id: 'react-native-screens',
+      label: 'React Native Screens',
+      description: 'Native navigation primitives (commonly used across stacks)',
+      package: 'react-native-screens',
+      version: '^4.13.1',
+    },
+    {
+      id: 'react-native-svg',
+      label: 'React Native SVG',
+      description: 'SVG support for React Native',
+      package: 'react-native-svg',
+      version: '^15.13.0',
+    },
+    {
+      id: 'async-storage',
+      label: 'Async Storage',
+      description: 'Key-value storage for React Native',
+      package: '@react-native-async-storage/async-storage',
+      version: '^2.2.0',
+    },
+    {
+      id: 'expo-constants',
+      label: 'Expo Constants',
+      description: 'App constants + manifest access (Expo)',
+      package: 'expo-constants',
+      version: '~18.0.8',
+    },
+  ],
   'State Management': [
     {
       id: 'zustand',
@@ -32,13 +69,6 @@ export const dependenciesByCategory: Record<string, DependencyOption[]> = {
     },
   ],
   'Navigation': [
-    {
-      id: 'react-navigation',
-      label: 'React Navigation',
-      description: 'Routing and navigation for React Native',
-      package: '@react-navigation/native',
-      version: '^7.0.0',
-    },
     {
       id: 'expo-router',
       label: 'Expo Router',
@@ -77,6 +107,13 @@ export const dependenciesByCategory: Record<string, DependencyOption[]> = {
       description: 'Performant form validation',
       package: 'react-hook-form',
       version: '^7.54.2',
+    },
+    {
+      id: 'hookform-resolvers',
+      label: 'RHF Resolvers',
+      description: 'Use Zod/Yup with React Hook Form',
+      package: '@hookform/resolvers',
+      version: '^4.1.0',
     },
     {
       id: 'formik',
@@ -147,6 +184,13 @@ export const dependenciesByCategory: Record<string, DependencyOption[]> = {
     },
   ],
   'Utilities': [
+    {
+      id: 'dotenv',
+      label: 'Dotenv',
+      description: 'Load environment variables from .env (Node tooling)',
+      package: 'dotenv',
+      version: '^16.6.1',
+    },
     {
       id: 'dayjs',
       label: 'Day.js',

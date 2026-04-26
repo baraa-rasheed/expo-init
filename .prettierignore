@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+
+# Build outputs
+build/
+.react-router/
+dist/
+
+# Lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
