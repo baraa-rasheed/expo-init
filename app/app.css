@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "react-cmdk/dist/cmdk.css";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-mono: 'JetBrains Mono Variable', monospace;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+    --font-sans: 'Inter Variable', sans-serif;
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.148 0.004 228.8);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.148 0.004 228.8);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.148 0.004 228.8);
+    --primary: oklch(0.488 0.243 264.376);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.963 0.002 197.1);
+    --muted-foreground: oklch(0.56 0.021 213.5);
+    --accent: oklch(0.963 0.002 197.1);
+    --accent-foreground: oklch(0.218 0.008 223.9);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.925 0.005 214.3);
+    --input: oklch(0.925 0.005 214.3);
+    --ring: oklch(0.723 0.014 214.4);
+    --chart-1: oklch(0.872 0.007 219.6);
+    --chart-2: oklch(0.56 0.021 213.5);
+    --chart-3: oklch(0.45 0.017 213.2);
+    --chart-4: oklch(0.378 0.015 216);
+    --chart-5: oklch(0.275 0.011 216.9);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.987 0.002 197.1);
+    --sidebar-foreground: oklch(0.148 0.004 228.8);
+    --sidebar-primary: oklch(0.546 0.245 262.881);
+    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+    --sidebar-accent: oklch(0.963 0.002 197.1);
+    --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
+    --sidebar-border: oklch(0.925 0.005 214.3);
+    --sidebar-ring: oklch(0.723 0.014 214.4);
+}
+
+.dark {
+    --background: oklch(0.148 0.004 228.8);
+    --foreground: oklch(0.987 0.002 197.1);
+    --card: oklch(0.218 0.008 223.9);
+    --card-foreground: oklch(0.987 0.002 197.1);
+    --popover: oklch(0.218 0.008 223.9);
+    --popover-foreground: oklch(0.987 0.002 197.1);
+    --primary: oklch(0.424 0.199 265.638);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.275 0.011 216.9);
+    --muted-foreground: oklch(0.723 0.014 214.4);
+    --accent: oklch(0.275 0.011 216.9);
+    --accent-foreground: oklch(0.987 0.002 197.1);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.56 0.021 213.5);
+    --chart-1: oklch(0.872 0.007 219.6);
+    --chart-2: oklch(0.56 0.021 213.5);
+    --chart-3: oklch(0.45 0.017 213.2);
+    --chart-4: oklch(0.378 0.015 216);
+    --chart-5: oklch(0.275 0.011 216.9);
+    --sidebar: oklch(0.218 0.008 223.9);
+    --sidebar-foreground: oklch(0.987 0.002 197.1);
+    --sidebar-primary: oklch(0.623 0.214 259.815);
+    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+    --sidebar-accent: oklch(0.275 0.011 216.9);
+    --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.56 0.021 213.5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+
+@layer components {
+  /* Make react-cmdk items match our "card" style */
+  .command-palette .command-palette-list-item.cmdk-card {
+    @apply rounded-xl border bg-card px-4 py-3 min-h-[72px] hover:bg-muted/30 transition-colors;
+  }
+
+  /* Undo react-cmdk default selected/hover fills for card items */
+  .command-palette .command-palette-list-item.cmdk-card {
+    background-color: var(--card);
+  }
+
+  /* Light mode: hovered/active cmdk card should be blue-ish (not black) */
+  :root .command-palette .command-palette-list-item.cmdk-card:hover,
+  :root .command-palette .command-palette-list-item.cmdk-card[aria-selected="true"],
+  :root .command-palette .command-palette-list-item.cmdk-card[aria-current="true"],
+  :root .command-palette .command-palette-list-item.cmdk-card[data-selected="true"] {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent) !important;
+  }
+
+  /* Some builds mark selection via "active/selected" attributes/classes */
+  :root .command-palette .command-palette-list-item.cmdk-card[data-active="true"],
+  :root .command-palette .command-palette-list-item.cmdk-card[data-state="active"],
+  :root .command-palette .command-palette-list-item.cmdk-card.active,
+  :root .command-palette .command-palette-list-item.cmdk-card.selected {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent) !important;
+  }
+
+  /* Fallback: react-cmdk's initial keyboard highlight (first item) */
+  :root .command-palette [role="option"][aria-selected="true"],
+  :root .command-palette [role="option"][data-selected="true"],
+  :root .command-palette [role="option"][data-active="true"],
+  :root .command-palette li[aria-selected="true"],
+  :root .command-palette li[data-selected="true"],
+  :root .command-palette li[data-active="true"] {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent) !important;
+  }
+
+  /* Theme react-cmdk container + overlay to our palette */
+  .command-palette .bg-gray-900.bg-opacity-80 {
+    background-color: rgb(0 0 0 / 0.5) !important;
+  }
+
+  /* Dialog panel background (cmdk uses bg-white / dark:bg-gray-900) */
+  .command-palette .bg-white {
+    background-color: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+  }
+
+  /* Divider lines inside palette */
+  .command-palette .divide-y > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border) !important;
+  }
+
+  /* Search input styling */
+  .command-palette input {
+    background-color: transparent !important;
+    color: var(--foreground) !important;
+    background-repeat: no-repeat !important;
+    background-position: 12px center !important;
+    background-size: 16px 16px !important;
+    padding-left: 40px !important;
+    background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D'0%200%2020%2020'%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%3E%3Cpath%20fill%3D'%238a94a6'%20d%3D'M9.477%207.638c.164-.24.343-.27.488-.27.145%200%20.387.03.551.27%202.13%202.901%206.55%2010.56%206.959%2010.976.605.618%201.436.233%201.918-.468.475-.69.607-1.174.607-1.69%200-.352-6.883-13.05-7.576-14.106-.667-1.017-.884-1.274-2.025-1.274h-.854c-1.138%200-1.302.257-1.969%201.274C6.883%203.406%200%2016.104%200%2016.456c0%20.517.132%201%20.607%201.69.482.7%201.313%201.086%201.918.468.41-.417%204.822-8.075%206.952-10.977Z'%2F%3E%3C%2Fsvg%3E");
+  }
+  .command-palette input::placeholder {
+    color: color-mix(in oklab, var(--muted-foreground) 100%, transparent) !important;
+  }
+
+  .dark .command-palette input {
+    background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D'0%200%2020%2020'%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%3E%3Cpath%20fill%3D'%239aa4b2'%20d%3D'M9.477%207.638c.164-.24.343-.27.488-.27.145%200%20.387.03.551.27%202.13%202.901%206.55%2010.56%206.959%2010.976.605.618%201.436.233%201.918-.468.475-.69.607-1.174.607-1.69%200-.352-6.883-13.05-7.576-14.106-.667-1.017-.884-1.274-2.025-1.274h-.854c-1.138%200-1.302.257-1.969%201.274C6.883%203.406%200%2016.104%200%2016.456c0%20.517.132%201%20.607%201.69.482.7%201.313%201.086%201.918.468.41-.417%204.822-8.075%206.952-10.977Z'%2F%3E%3C%2Fsvg%3E");
+  }
+}
